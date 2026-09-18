@@ -1,11 +1,11 @@
 [CmdletBinding()]
 param(
-    [string]$InstallDirectory = (Join-Path $env:ProgramData "LabManagement"),
+    [string]$InstallDirectory = (Join-Path $env:ProgramData "MONITIFY"),
     [string]$ServerUrl,
     [SecureString]$EnrollmentSecret,
-    [string]$ArchiveUrl = "https://github.com/pujariakash221-eng/LabManagement/archive/refs/heads/main.zip",
-    [string]$RepositoryUrl = "https://github.com/pujariakash221-eng/LabManagement.git",
-    [string]$RepositorySlug = "pujariakash221-eng/LabManagement",
+    [string]$ArchiveUrl = "https://github.com/pujariakash221-eng/MONITIFY/archive/refs/heads/main.zip",
+    [string]$RepositoryUrl = "https://github.com/pujariakash221-eng/MONITIFY.git",
+    [string]$RepositorySlug = "pujariakash221-eng/MONITIFY",
     [switch]$Update,
     [switch]$NoGit,
     [switch]$SkipElevatedCheck,
@@ -13,16 +13,16 @@ param(
 )
 
 # ==============================================================================
-# LabManagement one-command Windows installer
+# MONITIFY one-command Windows installer
 # ==============================================================================
-# This bootstrapper installs the LabManagement agent on Windows workstations.
+# This bootstrapper installs the MONITIFY agent on Windows workstations.
 # It automatically detects Git:
 #   - If Git is available, it uses the Git-based installation path.
 #   - If Git is NOT available, it automatically downloads and extracts the public
 #     repository archive from GitHub. Git is not required on target PCs.
 #
 # Run PowerShell as Administrator:
-#   irm https://raw.githubusercontent.com/pujariakash221-eng/LabManagement/main/install-agent.ps1 | iex
+#   irm https://raw.githubusercontent.com/pujariakash221-eng/MONITIFY/main/install-agent.ps1 | iex
 # ==============================================================================
 
 $ErrorActionPreference = "Stop"
@@ -33,7 +33,7 @@ function Test-IsAdministrator {
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
-function Test-LabManagementProject {
+function Test-MONITIFYProject {
     param([string]$Path)
 
     if ([string]::IsNullOrWhiteSpace($Path)) {
@@ -43,10 +43,10 @@ function Test-LabManagementProject {
         (Test-Path -LiteralPath (Join-Path $Path "agent\main.py") -PathType Leaf)
 }
 
-function Test-LabManagementRepository {
+function Test-MONITIFYRepository {
     param([string]$Path)
 
-    return Test-LabManagementProject -Path $Path
+    return Test-MONITIFYProject -Path $Path
 }
 
 function Get-CurrentRepositoryRoot {
@@ -56,7 +56,7 @@ function Get-CurrentRepositoryRoot {
         return $null
     }
     $root = & $GitPath -C (Get-Location).Path rev-parse --show-toplevel 2>$null
-    if ($LASTEXITCODE -eq 0 -and (Test-LabManagementProject -Path $root)) {
+    if ($LASTEXITCODE -eq 0 -and (Test-MONITIFYProject -Path $root)) {
         return (Resolve-Path -LiteralPath $root).Path
     }
     return $null
@@ -73,18 +73,18 @@ function Assert-NativeCommandSucceeded {
 function Find-ExtractedProjectRoot {
     param([Parameter(Mandatory = $true)][string]$ExtractPath)
 
-    if (Test-LabManagementProject -Path $ExtractPath) {
+    if (Test-MONITIFYProject -Path $ExtractPath) {
         return (Resolve-Path -LiteralPath $ExtractPath).Path
     }
     foreach ($item in (Get-ChildItem -LiteralPath $ExtractPath -Directory -ErrorAction SilentlyContinue)) {
-        if (Test-LabManagementProject -Path $item.FullName) {
+        if (Test-MONITIFYProject -Path $item.FullName) {
             return (Resolve-Path -LiteralPath $item.FullName).Path
         }
     }
     $setupFile = Get-ChildItem -LiteralPath $ExtractPath -Filter "setup_agent.ps1" -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($setupFile) {
         $candidate = Split-Path -Parent (Split-Path -Parent $setupFile.DirectoryName)
-        if (Test-LabManagementProject -Path $candidate) {
+        if (Test-MONITIFYProject -Path $candidate) {
             return (Resolve-Path -LiteralPath $candidate).Path
         }
     }
@@ -112,7 +112,7 @@ function Install-FromArchive {
     )
 
     $tempRoot = [System.IO.Path]::GetTempPath()
-    $tempDir = Join-Path $tempRoot ("LabManagementInstall_" + [System.Guid]::NewGuid().ToString("N"))
+    $tempDir = Join-Path $tempRoot ("MONITIFYInstall_" + [System.Guid]::NewGuid().ToString("N"))
     New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
     try {
         $zipFile = Join-Path $tempDir "archive.zip"
@@ -134,7 +134,7 @@ function Install-FromArchive {
                 Invoke-WebRequest -Uri $Url -OutFile $zipFile -UseBasicParsing -TimeoutSec 120 -ErrorAction Stop
             }
         } catch {
-            throw "Failed to download the LabManagement repository ZIP from $Url. Verify internet connectivity and that the repository is accessible. Details: $($_.Exception.Message)"
+            throw "Failed to download the MONITIFY repository ZIP from $Url. Verify internet connectivity and that the repository is accessible. Details: $($_.Exception.Message)"
         }
 
         Write-Host "Extracting repository archive..." -ForegroundColor Yellow
@@ -146,7 +146,7 @@ function Install-FromArchive {
 
         $sourceRoot = Find-ExtractedProjectRoot -ExtractPath $extractDir
         if (-not $sourceRoot) {
-            throw "The downloaded archive does not contain a valid LabManagement project (missing deploy\windows\setup_agent.ps1)."
+            throw "The downloaded archive does not contain a valid MONITIFY project (missing deploy\windows\setup_agent.ps1)."
         }
 
         Write-Host "Installing project files to: $TargetDirectory" -ForegroundColor Green
@@ -169,7 +169,7 @@ if (-not $SkipElevatedCheck -and -not (Test-IsAdministrator)) {
 }
 
 Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host "  LabManagement Windows Agent Installer" -ForegroundColor Cyan
+Write-Host "  MONITIFY Windows Agent Installer" -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 
 $gitPath = $null
@@ -191,17 +191,19 @@ if ($gitPath) {
 # prefer the checked-out repository containing this script, then an existing
 # installation directory, then a repository containing the caller's current location.
 $isExplicitInstallDir = $PSBoundParameters.ContainsKey("InstallDirectory")
-$scriptRepository = if (-not $isExplicitInstallDir -and (Test-LabManagementProject -Path $PSScriptRoot)) {
+$scriptRepository = if (-not $isExplicitInstallDir -and (Test-MONITIFYProject -Path $PSScriptRoot)) {
     (Resolve-Path -LiteralPath $PSScriptRoot).Path
 } else {
     $null
 }
-$targetRepository = if (Test-LabManagementProject -Path $InstallDirectory) {
+$targetRepository = if (Test-MONITIFYProject -Path $InstallDirectory) {
     (Resolve-Path -LiteralPath $InstallDirectory).Path
 } else {
     $null
 }
-$currentRepository = if (-not $isExplicitInstallDir) { Get-CurrentRepositoryRoot -GitPath $gitPath } else { $null }
+# Never inspect the caller's current directory for the repository root. The installer
+# may be launched from C:\Windows\System32 or any unrelated directory.
+$currentRepository = $null
 
 $projectRoot = if ($isExplicitInstallDir) {
     $targetRepository
@@ -210,7 +212,7 @@ $projectRoot = if ($isExplicitInstallDir) {
 }
 
 if ($projectRoot -and -not $Update) {
-    Write-Host "Using existing LabManagement installation: $projectRoot" -ForegroundColor Green
+    Write-Host "Using existing MONITIFY installation: $projectRoot" -ForegroundColor Green
 } else {
     $parentDirectory = Split-Path -Parent $InstallDirectory
     if ([string]::IsNullOrWhiteSpace($parentDirectory)) {
@@ -218,8 +220,8 @@ if ($projectRoot -and -not $Update) {
     }
     if (Test-Path -LiteralPath $InstallDirectory) {
         $contents = Get-ChildItem -LiteralPath $InstallDirectory -Force -ErrorAction Stop
-        if ($contents.Count -gt 0 -and -not (Test-LabManagementProject -Path $InstallDirectory)) {
-            throw "Install directory '$InstallDirectory' already exists but is not a LabManagement installation. Choose an empty directory with -InstallDirectory."
+        if ($contents.Count -gt 0 -and -not (Test-MONITIFYProject -Path $InstallDirectory)) {
+            throw "Install directory '$InstallDirectory' already exists but is not a MONITIFY installation. Choose an empty directory with -InstallDirectory."
         }
     }
     if (-not (Test-Path -LiteralPath $parentDirectory)) {
@@ -236,7 +238,7 @@ if ($projectRoot -and -not $Update) {
         $cloneSucceeded = $false
         if ($ghCommand) {
             & $ghCommand.Source repo clone $RepositorySlug $InstallDirectory 2>$null
-            if ($LASTEXITCODE -eq 0 -and (Test-LabManagementProject -Path $InstallDirectory)) {
+            if ($LASTEXITCODE -eq 0 -and (Test-MONITIFYProject -Path $InstallDirectory)) {
                 $cloneSucceeded = $true
             }
         }
@@ -245,15 +247,15 @@ if ($projectRoot -and -not $Update) {
             Assert-NativeCommandSucceeded "Repository clone"
         }
 
-        if (-not (Test-LabManagementProject -Path $InstallDirectory)) {
-            throw "Clone completed but the expected LabManagement setup script was not found at '$InstallDirectory'."
+        if (-not (Test-MONITIFYProject -Path $InstallDirectory)) {
+            throw "Clone completed but the expected MONITIFY setup script was not found at '$InstallDirectory'."
         }
         $projectRoot = (Resolve-Path -LiteralPath $InstallDirectory).Path
         Write-Host "Repository cloned to: $projectRoot" -ForegroundColor Green
     } else {
         $projectRoot = Install-FromArchive -Url $ArchiveUrl -TargetDirectory $InstallDirectory
-        if (-not (Test-LabManagementProject -Path $projectRoot)) {
-            throw "Installation completed but the expected LabManagement setup script was not found at '$projectRoot'."
+        if (-not (Test-MONITIFYProject -Path $projectRoot)) {
+            throw "Installation completed but the expected MONITIFY setup script was not found at '$projectRoot'."
         }
         Write-Host "Public repository archive extracted and installed to: $projectRoot" -ForegroundColor Green
     }
